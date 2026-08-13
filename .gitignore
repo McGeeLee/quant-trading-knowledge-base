@@ -13,13 +13,11 @@ venv/
 *.pem
 *.key
 
-# Large/local datasets and generated artifacts
-data/raw/**
-data/processed/**
-!data/raw/.gitkeep
-!data/processed/.gitkeep
+# Generated artifacts
 artifacts/
-reports/generated/
+build/
+dist/
+*.egg-info/
 
 # Editors and operating systems
 .DS_Store

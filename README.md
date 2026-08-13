@@ -1,67 +1,28 @@
-# 量化交易学习知识库
+# Quant Trading Code
 
-这是一个面向个人长期学习、研究与复盘的量化交易知识库。目标不是收集尽可能多的资料，而是形成一套可以持续验证、复现和迭代的研究体系。
+个人量化交易代码仓库，只保存代码、测试和代码要求。
 
-> 风险提示：本仓库仅用于学习和研究，不构成投资建议。任何策略在实盘前都应经过数据检查、样本外测试、交易成本评估和风险审查。
-
-## 学习主线
-
-1. **市场基础**：资产类别、订单类型、收益与风险、交易成本。
-2. **工具基础**：Python、NumPy、pandas、可视化、SQL、Git。
-3. **数学统计**：概率、统计推断、回归、时间序列、优化。
-4. **策略研究**：趋势、均值回归、因子、事件驱动、资产配置。
-5. **回测验证**：数据清洗、基准、样本外测试、稳健性和偏差控制。
-6. **风险与实盘**：仓位管理、组合风险、执行、监控和复盘。
-
-详细进度见 [ROADMAP.md](ROADMAP.md)。
-
-## 仓库结构
+## 目录
 
 ```text
 .
-├── notes/          # 分类知识库：金融、期货、计算机、代码、软件等
-├── research/       # 研究问题与实验记录
-├── strategies/     # 策略研究文档，不放正式 Python 实现
-├── notebooks/      # 探索性分析与可复现实验
-├── src/             # 可复用、可测试的正式 Python 代码
-├── scripts/         # 数据处理、回测、报告等命令入口
-├── tests/           # 与 src/ 对应的自动化测试
-├── examples/        # 最小使用示例
-├── docs/            # 代码架构、接口和开发规范
-├── data/           # 数据说明；原始大文件不提交 Git
-├── risk/           # 风险管理框架
-├── journal/        # 日度/周度学习与交易复盘
-├── resources/      # 书籍、课程、论文和工具索引
-├── GLOSSARY.md     # 术语表
-└── ROADMAP.md      # 分阶段学习路线
+├── src/quant_trading/  # 正式 Python 代码
+├── tests/              # 自动化测试
+├── CODE_REQUIREMENTS.md
+├── pyproject.toml
+└── README.md
 ```
 
-代码应放在哪里、如何命名和记录，见 [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md)。项目已经提供一个可运行的绩效指标模块和对应测试，可作为后续代码的模板。
+所有代码必须遵守 [CODE_REQUIREMENTS.md](CODE_REQUIREMENTS.md)。
 
-知识点按用途分类，入口见 [notes/README.md](notes/README.md)。其中期货术语有独立术语表，软件使用知识与软件设置知识分开记录。
-
-## 建议使用方式
-
-- 每个学习主题输出一篇自己的笔记，写清概念、公式、例子和疑问。
-- 每个策略先填写 `strategies/STRATEGY_TEMPLATE.md`，再开始写代码。
-- 验证稳定的逻辑从 Notebook 迁移到 `src/quant_trading/`，并在 `tests/` 添加测试。
-- 每次实验填写 `research/RESEARCH_TEMPLATE.md`，记录数据版本、参数和结论。
-- 结论必须区分样本内、样本外和实盘结果，避免只保留成功实验。
-- 每周使用 `journal/WEEKLY_REVIEW_TEMPLATE.md` 复盘一次。
-
-## 研究原则
-
-- 先提出可证伪的假设，再选择数据和方法。
-- 回测必须考虑手续费、滑点、成交约束和幸存者偏差。
-- 不用单一指标判断策略，至少同时观察收益、回撤、稳定性和容量。
-- 不把回测收益当作未来承诺；优先保护本金和研究过程的可复现性。
-
-## 代码快速开始
+## 运行测试
 
 ```bash
-# 运行当前全部测试（只使用 Python 标准库）
-python -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -v
+```
 
-# 安装为可编辑包；以后增加依赖时仍使用同一入口
-python -m pip install -e .
+## 本地安装
+
+```bash
+python3 -m pip install -e .
 ```
