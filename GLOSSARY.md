@@ -1,5 +1,7 @@
 # 量化交易术语表
 
+本表记录跨市场常用术语。期货市场专用词汇见 [`notes/02-futures/FUTURES_GLOSSARY.md`](notes/02-futures/FUTURES_GLOSSARY.md)。
+
 | 术语 | 简要说明 |
 |---|---|
 | Alpha | 相对基准或风险模型无法解释的超额收益部分。 |
