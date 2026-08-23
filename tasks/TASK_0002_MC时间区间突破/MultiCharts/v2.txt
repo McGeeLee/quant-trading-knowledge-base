@@ -1,0 +1,89 @@
+{ TASK_0002 v2 - Day-session time-range breakout
+  Chart: CFFEX.IF.HOT, 1-minute bars
+  Scope: basic day-session backtest only
+  Difference from v1: the test date range is controlled by the
+  MultiCharts chart/strategy panel, not by code inputs.
+}
+
+Inputs:
+    Time1(0931),
+    Time2(0945),
+    UpValue(1.0),
+    DnValue(1.0),
+    SP(30),
+    SL(50),
+    StopTime(1100),
+    CloseTime(1458);
+
+Vars:
+    RangeHigh(0),
+    RangeLow(0),
+    RangeStarted(False),
+    RangeReady(False),
+    TradedToday(False),
+    TradesAtDayStart(0);
+
+{ Reset the range and the one-trade flag at each new date.
+  This remains valid only for the current day-session version. }
+if Date <> Date[1] then
+begin
+    RangeHigh = 0;
+    RangeLow = 0;
+    RangeStarted = False;
+    RangeReady = False;
+    TradedToday = False;
+    TradesAtDayStart = TotalTrades;
+end;
+
+{ Once a position has existed today, do not allow another entry. }
+if MarketPosition <> 0 or TotalTrades > TradesAtDayStart then
+    TradedToday = True;
+
+{ Build the inclusive 09:31-09:45 reference range. }
+if Time >= Time1 and Time <= Time2 then
+begin
+    if RangeStarted = False then
+    begin
+        RangeHigh = High;
+        RangeLow = Low;
+        RangeStarted = True;
+    end
+    else
+    begin
+        RangeHigh = MaxList(RangeHigh, High);
+        RangeLow = MinList(RangeLow, Low);
+    end;
+end;
+
+{ On the 09:45 bar, the range is ready and orders may be placed
+  for the next bar. The earliest possible fill is therefore 09:46. }
+if Time >= Time2 and RangeStarted then
+    RangeReady = True;
+
+if RangeReady
+    and MarketPosition = 0
+    and TradedToday = False
+    and Time >= Time2
+    and Time < CalcTime(StopTime, -1) then
+begin
+    Buy ("LE") 1 Contract next bar at RangeHigh + UpValue stop;
+    SellShort ("SE") 1 Contract next bar at RangeLow - DnValue stop;
+end;
+
+{ SP and SL are price points. Built-in stops require currency amounts.
+  A built-in stop may exit on the entry bar. One-minute OHLC data cannot
+  always determine the true intrabar price order, so validate same-bar
+  exits with finer data or the appropriate intrabar backtest settings. }
+SetStopContract;
+SetProfitTarget(SP * BigPointValue);
+SetStopLoss(SL * BigPointValue);
+
+{ Submit the day-session exit on the 14:58 bar for the 14:59 open. }
+if Time = CloseTime then
+begin
+    if MarketPosition = 1 then
+        Sell ("TimeLX") next bar at market;
+
+    if MarketPosition = -1 then
+        BuyToCover ("TimeSX") next bar at market;
+end;
