@@ -1,0 +1,94 @@
+{ V3 SIGNAL: spread up streak -> LONG Data1 only. Historical DAILY only.
+  Near-long: Data1=near, Data2=far, NearIsData1=True.
+  Far-long:  Data1=far, Data2=near, NearIsData1=False.
+  Independent strategies, NEVER paired orders. TP/SL use Data1 price.
+  1-day bars, same sessions/history. Close triggers, next-open orders.
+}
+[IntrabarOrderGeneration = false]
+Inputs: NearIsData1(True), UpDays(3), Lots(1), SP(5.0), SL(3.0);
+Vars: SpreadClose(0), PreviousSpread(0), HavePrevious(False),
+    UpCount(0), TradeState(0), EntryOpen(0), LongPoints(0),
+    LastProcessedDate(0), ExitedToday(False);
+
+if GetAppInfo(aiStrategyAuto) = 1 then
+    RaiseRuntimeError("V3 historical only. Disable automated trading.");
+if GetAppInfo(aiRealTimeCalc) = 1 then
+    RaiseRuntimeError("V3 historical only. Use a completed historical range.");
+if BarType of Data1 <> 2 or BarType of Data2 <> 2
+    or BarInterval of Data1 <> 1 or BarInterval of Data2 <> 1 then
+    RaiseRuntimeError("Both series must use 1-day bars.");
+if UpDays < 1 or UpDays <> IntPortion(UpDays)
+    or Lots < 1 or Lots <> IntPortion(Lots) or SP <= 0 or SL <= 0 then
+    RaiseRuntimeError("Invalid UpDays/Lots/SP/SL.");
+
+if BarStatus(1) = 2 and BarStatus(2) = 2
+    and Date of Data1 = Date of Data2
+    and Time of Data1 = Time of Data2
+    and Date of Data1 <> LastProcessedDate then
+begin
+    if HavePrevious then
+    begin
+        if Date[1] of Data1 <> LastProcessedDate
+            or Date[1] of Data2 <> LastProcessedDate then
+            RaiseRuntimeError("History gap: align both daily series.");
+    end;
+    if Close of Data1 <= 0 or Close of Data2 <= 0 then
+        RaiseRuntimeError("Missing/non-positive SC close.");
+    LastProcessedDate = Date of Data1;
+    ExitedToday = False;
+    if NearIsData1 then
+        SpreadClose = Close of Data1 - Close of Data2
+    else
+        SpreadClose = Close of Data2 - Close of Data1;
+
+    { 0=flat, 1=entry pending, 2=long, 3=exit pending. }
+    if TradeState = 3 then
+    begin
+        if MarketPosition <> 0 then
+            RaiseRuntimeError("Exit not filled. Inspect backtest.");
+        TradeState = 0;
+        UpCount = 0;
+        ExitedToday = True;
+    end;
+    if TradeState = 1 then
+    begin
+        if Open of Data1 <= 0 or MarketPosition <> 1 then
+            RaiseRuntimeError("Long entry not filled or missing open.");
+        EntryOpen = Open of Data1;
+        TradeState = 2;
+    end;
+    if TradeState = 2 then
+    begin
+        if MarketPosition <> 1 then
+            RaiseRuntimeError("Unexpected position. Use one signal only.");
+        UpCount = 0;
+        LongPoints = Close of Data1 - EntryOpen;
+        if LongPoints >= SP - 0.0000001 then
+        begin
+            Sell ("LongTP") next bar at market;
+            TradeState = 3;
+        end
+        else if LongPoints <= -SL + 0.0000001 then
+        begin
+            Sell ("LongSL") next bar at market;
+            TradeState = 3;
+        end;
+    end
+    else if TradeState = 0 and ExitedToday = False then
+    begin
+        if HavePrevious and SpreadClose > PreviousSpread + 0.0000001 then
+            UpCount = UpCount + 1
+        else
+            UpCount = 0;
+        if UpCount >= UpDays then
+        begin
+            if MarketPosition <> 0 then
+                RaiseRuntimeError("Unexpected position before entry.");
+            Buy ("SpreadUpLE") Lots contracts next bar at market;
+            TradeState = 1;
+            UpCount = 0;
+        end;
+    end;
+    PreviousSpread = SpreadClose;
+    HavePrevious = True;
+end;

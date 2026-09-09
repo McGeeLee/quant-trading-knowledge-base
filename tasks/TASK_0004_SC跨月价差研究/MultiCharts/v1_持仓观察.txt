@@ -1,0 +1,24 @@
+{ TASK_0004 v1 - Open-interest observer for two SC contracts
+  Data1: SC2610
+  Data2: SC2611
+  Study type: Indicator only; this code never sends orders.
+  Use daily bars and first verify that the data feed supplies OpenInt.
+}
+
+Vars:
+    NearOpenInterest(0),
+    FarOpenInterest(0);
+
+if Date data1 = Date data2 and Time data1 = Time data2 then
+begin
+    NearOpenInterest = OpenInt data1;
+    FarOpenInterest = OpenInt data2;
+
+    Plot1(NearOpenInterest, "NearOI");
+    Plot2(FarOpenInterest, "FarOI");
+end
+else
+begin
+    NoPlot(1);
+    NoPlot(2);
+end;

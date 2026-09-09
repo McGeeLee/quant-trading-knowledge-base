@@ -1,0 +1,53 @@
+{ TASK_0004 v1 - SC adjacent-month spread observer
+  Data1: SC2610
+  Data2: SC2611
+  Formula: Close of Data1 - Close of Data2
+  Study type: Indicator only; this code never sends orders.
+}
+
+Inputs:
+    AvgLength(20);
+
+Vars:
+    NearPrice(0),
+    FarPrice(0),
+    MarketLevel(0),
+    SpreadValue(0),
+    SpreadAverage(0);
+
+{ Only calculate when Data1 and Data2 refer to the same completed bar.
+  Daily bars are recommended for the first experiment. }
+if Date data1 = Date data2 and Time data1 = Time data2 then
+begin
+    NearPrice = Close data1;
+    FarPrice = Close data2;
+    MarketLevel = (NearPrice + FarPrice) / 2;
+    SpreadValue = NearPrice - FarPrice;
+    SpreadAverage = AverageFC(SpreadValue, AvgLength);
+
+    Plot1(SpreadValue, "Near-Far");
+    Plot2(SpreadAverage, "SpreadAvg");
+    Plot3(0, "Zero");
+
+    { Green: market rose and spread expanded on the same bar.
+      Red: market fell and spread narrowed on the same bar.
+      Yellow: all other combinations. These colors describe the bar;
+      they are not forecasts for the next bar. }
+    if CurrentBar > 1 then
+    begin
+        if MarketLevel > MarketLevel[1]
+            and SpreadValue > SpreadValue[1] then
+            SetPlotColor(1, Green)
+        else if MarketLevel < MarketLevel[1]
+            and SpreadValue < SpreadValue[1] then
+            SetPlotColor(1, Red)
+        else
+            SetPlotColor(1, Yellow);
+    end;
+end
+else
+begin
+    NoPlot(1);
+    NoPlot(2);
+    NoPlot(3);
+end;

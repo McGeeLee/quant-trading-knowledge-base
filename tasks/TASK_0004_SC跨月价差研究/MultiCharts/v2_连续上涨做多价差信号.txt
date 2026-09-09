@@ -1,0 +1,144 @@
+{ TASK_0004 v2 - LONG calendar spread, paired DAILY historical signals.
+  SIGNAL, not Indicator. Install on BOTH charts with reversed Data1/Data2.
+  Chart A: Data1 near, Data2 far, NearIsData1=True.
+  Chart B: Data1 far, Data2 near, NearIsData1=False.
+  All data must be 1-day bars with identical sessions and history.
+  Orders in this script trade Data1 ONLY.
+  Pair entry spread uses the two historical next-day opens, NOT broker fills.
+  Stops are checked at daily CLOSE and exit at NEXT daily open.
+  Historical research only: automation and real-time calculations blocked.
+}
+
+[IntrabarOrderGeneration = false]
+
+Inputs:
+    NearIsData1(True),
+    UpDays(3),
+    Lots(1),
+    SP(5.0),
+    SL(3.0);
+
+Vars:
+    SpreadClose(0),
+    SpreadOpen(0),
+    PreviousSpread(0),
+    HavePrevious(False),
+    UpCount(0),
+    PairState(0),
+    EntrySpread(0),
+    PairPoints(0),
+    LastProcessedDate(0),
+    ExitedToday(False);
+
+{ States: 0=flat, 1=entry submitted, 2=holding, 3=exit submitted. }
+if GetAppInfo(aiStrategyAuto) = 1 then
+    RaiseRuntimeError("V2 historical only. Disable automated trading.");
+if GetAppInfo(aiRealTimeCalc) = 1 then
+    RaiseRuntimeError("V2 historical only. Use a completed historical range.");
+
+if BarType of Data1 <> 2 or BarType of Data2 <> 2
+    or BarInterval of Data1 <> 1 or BarInterval of Data2 <> 1 then
+    RaiseRuntimeError("Both Data1 and Data2 must use 1-day bars.");
+if UpDays < 1 or UpDays <> IntPortion(UpDays)
+    or Lots < 1 or Lots <> IntPortion(Lots) or SP <= 0 or SL <= 0 then
+    RaiseRuntimeError("UpDays/Lots must be positive integers; SP/SL positive.");
+
+if BarStatus(1) = 2 and BarStatus(2) = 2
+    and Date of Data1 = Date of Data2
+    and Time of Data1 = Time of Data2
+    and Date of Data1 <> LastProcessedDate then
+begin
+    { Refuse to bridge a missing/unaligned day after initialization. }
+    if HavePrevious then
+    begin
+        if Date[1] of Data1 <> LastProcessedDate
+            or Date[1] of Data2 <> LastProcessedDate then
+            RaiseRuntimeError("History gap: align both daily series and reload both charts.");
+    end;
+    LastProcessedDate = Date of Data1;
+    ExitedToday = False;
+
+    if NearIsData1 then
+    begin
+        SpreadClose = Close of Data1 - Close of Data2;
+        SpreadOpen = Open of Data1 - Open of Data2;
+    end
+    else
+    begin
+        SpreadClose = Close of Data2 - Close of Data1;
+        SpreadOpen = Open of Data2 - Open of Data1;
+    end;
+
+    { Orders submitted on the previous daily close fill at this day's open
+      in the historical next-bar market model. No same-close entries. }
+    if PairState = 3 then
+    begin
+        if MarketPosition <> 0 then
+            RaiseRuntimeError("Local exit not filled. Stop paired backtest and inspect.");
+        PairState = 0;
+        UpCount = 0;
+        ExitedToday = True;
+    end;
+
+    if PairState = 1 then
+    begin
+        if Open of Data1 <= 0 or Open of Data2 <= 0 then
+            RaiseRuntimeError("Missing/non-positive SC entry open.");
+        if (NearIsData1 and MarketPosition <> 1)
+            or (NearIsData1 = False and MarketPosition <> -1) then
+            RaiseRuntimeError("Local entry not filled. Check direction, size, strategy settings.");
+        EntrySpread = SpreadOpen;
+        PairState = 2;
+        Print("PAIR_ENTRY ", Date:7:0, " spread=", EntrySpread:0:4);
+    end;
+
+    if PairState = 2 then
+    begin
+        if (NearIsData1 and MarketPosition <> 1)
+            or (NearIsData1 = False and MarketPosition <> -1) then
+            RaiseRuntimeError("Unexpected local position while holding. Inspect both charts.");
+        UpCount = 0;
+        PairPoints = SpreadClose - EntrySpread;
+        if PairPoints >= SP - 0.0000001 then
+        begin
+            if NearIsData1 then
+                Sell ("NearTP") next bar at market
+            else
+                BuyToCover ("FarTP") next bar at market;
+            PairState = 3;
+            Print("PAIR_TP_SIGNAL ", Date:7:0, " points=", PairPoints:0:4);
+        end
+        else if PairPoints <= -SL + 0.0000001 then
+        begin
+            if NearIsData1 then
+                Sell ("NearSL") next bar at market
+            else
+                BuyToCover ("FarSL") next bar at market;
+            PairState = 3;
+            Print("PAIR_SL_SIGNAL ", Date:7:0, " points=", PairPoints:0:4);
+        end;
+    end
+    else if PairState = 0 and ExitedToday = False then
+    begin
+        if HavePrevious and SpreadClose > PreviousSpread + 0.0000001 then
+            UpCount = UpCount + 1
+        else
+            UpCount = 0;
+
+        if UpCount >= UpDays then
+        begin
+            if MarketPosition <> 0 then
+                RaiseRuntimeError("Unexpected local position. Use a clean single-signal chart.");
+            if NearIsData1 then
+                Buy ("NearLE") Lots contracts next bar at market
+            else
+                SellShort ("FarSE") Lots contracts next bar at market;
+            PairState = 1;
+            UpCount = 0;
+            Print("PAIR_ENTRY_SIGNAL ", Date:7:0, " spread=", SpreadClose:0:4);
+        end;
+    end;
+
+    PreviousSpread = SpreadClose;
+    HavePrevious = True;
+end;
