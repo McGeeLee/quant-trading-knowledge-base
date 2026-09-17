@@ -1,0 +1,152 @@
+{ SC-CS-LEAD-V1
+  Leader/follower calendar-spread probe.
+  Current research definition: Data1 = SC2610 leader, Data2 = SC2611 follower.
+  Run the same Signal twice with reversed Data1/Data2 to route both legs:
+    Long spread chart : Data1 SC2610, Data2 SC2611, NearIsData1=True.
+    Short spread chart: Data1 SC2611, Data2 SC2610, NearIsData1=False.
+
+  Hypothesis:
+    SC2610 moves first. If leader move and spread move have the same sign,
+    the relative move may continue briefly. This is a research probe only.
+  Works on synchronized minute bars or Tick bars. Orders are next-bar market.
+  Do not run live or enable automated trading.
+}
+
+[IntrabarOrderGeneration = false]
+
+Inputs:
+    NearIsData1(True),
+    LookbackBars(1),
+    MinLeaderMove(1.0),
+    MinSpreadMove(0.0),
+    Lots(1),
+    ProfitTarget(1.0),
+    StopLoss(1.0),
+    MaxHoldBars(5);
+
+Vars:
+    SpreadNow(0), SpreadPast(0), SpreadOpen(0),
+    LeaderNow(0), LeaderPast(0), LeaderMove(0), SpreadMove(0),
+    EntrySpread(0), OpenPoints(0), HoldBars(0),
+    State(0), LastDate(0), LastTime(0), ExitedBar(False);
+
+if GetAppInfo(aiStrategyAuto) = 1 then
+    RaiseRuntimeError("SC-CS-LEAD-V1 is historical research only.");
+if GetAppInfo(aiRealTimeCalc) = 1 then
+    RaiseRuntimeError("Use completed historical bars, not real-time calculation.");
+if LookbackBars < 1 or LookbackBars <> IntPortion(LookbackBars)
+    or Lots < 1 or Lots <> IntPortion(Lots)
+    or MinLeaderMove < 0 or MinSpreadMove < 0
+    or ProfitTarget <= 0 or StopLoss <= 0
+    or MaxHoldBars < 1 or MaxHoldBars <> IntPortion(MaxHoldBars) then
+    RaiseRuntimeError("Invalid V1 inputs.");
+
+if BarStatus(1) = 2 and BarStatus(2) = 2
+    and Date of Data1 = Date of Data2
+    and Time of Data1 = Time of Data2
+    and (Date of Data1 <> LastDate or Time of Data1 <> LastTime) then
+begin
+    if CurrentBar > LookbackBars then
+    begin
+        if NearIsData1 then
+        begin
+            SpreadNow = Close of Data1 - Close of Data2;
+            SpreadPast = Close[LookbackBars] of Data1 - Close[LookbackBars] of Data2;
+            SpreadOpen = Open of Data1 - Open of Data2;
+            LeaderNow = Close of Data1;
+            LeaderPast = Close[LookbackBars] of Data1;
+        end
+        else
+        begin
+            SpreadNow = Close of Data2 - Close of Data1;
+            SpreadPast = Close[LookbackBars] of Data2 - Close[LookbackBars] of Data1;
+            SpreadOpen = Open of Data2 - Open of Data1;
+            LeaderNow = Close of Data2;
+            LeaderPast = Close[LookbackBars] of Data2;
+        end;
+
+        LeaderMove = LeaderNow - LeaderPast;
+        SpreadMove = SpreadNow - SpreadPast;
+        ExitedBar = False;
+
+        { State 3: previous bar submitted an exit; this bar is its fill. }
+        if State = 3 then
+        begin
+            if MarketPosition <> 0 then
+                RaiseRuntimeError("Local leg did not exit. Inspect both charts.");
+            State = 0;
+            HoldBars = 0;
+            ExitedBar = True;
+        end;
+
+        { State 1: previous bar submitted an entry; this bar is its fill. }
+        if State = 1 then
+        begin
+            if Open of Data1 <= 0 or Open of Data2 <= 0 then
+                RaiseRuntimeError("Invalid paired opening price.");
+            if NearIsData1 and MarketPosition <> 1 then
+                RaiseRuntimeError("Near-leg entry was not filled.");
+            if NearIsData1 = False and MarketPosition <> -1 then
+                RaiseRuntimeError("Far-leg entry was not filled.");
+            EntrySpread = SpreadOpen;
+            HoldBars = 0;
+            State = 2;
+            Print("V1 ENTRY ", Date:7:0, " ", Time:4:0,
+                  " spread=", EntrySpread:0:2);
+        end;
+
+        if State = 2 then
+        begin
+            if NearIsData1 and MarketPosition <> 1 then
+                RaiseRuntimeError("Unexpected near-leg position.");
+            if NearIsData1 = False and MarketPosition <> -1 then
+                RaiseRuntimeError("Unexpected far-leg position.");
+            HoldBars = HoldBars + 1;
+            OpenPoints = SpreadNow - EntrySpread;
+
+            if OpenPoints >= ProfitTarget - 0.0000001 then
+            begin
+                if NearIsData1 then Sell ("V1TP") next bar at market
+                else BuyToCover ("V1TP") next bar at market;
+                State = 3;
+            end
+            else if OpenPoints <= -StopLoss + 0.0000001 then
+            begin
+                if NearIsData1 then Sell ("V1SL") next bar at market
+                else BuyToCover ("V1SL") next bar at market;
+                State = 3;
+            end
+            else if HoldBars >= MaxHoldBars then
+            begin
+                if NearIsData1 then Sell ("V1TIME") next bar at market
+                else BuyToCover ("V1TIME") next bar at market;
+                State = 3;
+            end;
+        end
+        else if State = 0 and ExitedBar = False then
+        begin
+            { Long-spread signal when SC2610 leads up; short-spread
+              signal when SC2610 leads down. }
+            if LeaderMove >= MinLeaderMove
+                and SpreadMove > MinSpreadMove then
+            begin
+                if NearIsData1 then Buy ("V1SpreadLE") Lots contracts next bar at market
+                else SellShort ("V1SpreadSE") Lots contracts next bar at market;
+                State = 1;
+                Print("V1 UP SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " leader=", LeaderMove:0:2, " spread=", SpreadMove:0:2);
+            end
+            else if LeaderMove <= -MinLeaderMove
+                and SpreadMove < -MinSpreadMove then
+            begin
+                if NearIsData1 then SellShort ("V1SpreadSE") Lots contracts next bar at market
+                else Buy ("V1SpreadLE") Lots contracts next bar at market;
+                State = 1;
+                Print("V1 DOWN SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " leader=", LeaderMove:0:2, " spread=", SpreadMove:0:2);
+            end;
+        end;
+    end;
+    LastDate = Date of Data1;
+    LastTime = Time of Data1;
+end;

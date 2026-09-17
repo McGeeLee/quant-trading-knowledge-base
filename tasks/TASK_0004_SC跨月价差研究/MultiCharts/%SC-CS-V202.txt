@@ -1,0 +1,155 @@
+{ %SC-CS-V202
+  Single-chart virtual two-leg calendar-spread research model.
+
+  Data1 = near/leader contract, Data2 = far/follower contract.
+  This version intentionally sends NO broker/strategy orders. It simulates
+  both legs at the same paired bar opening price and calculates spread P&L.
+  Therefore the platform Strategy Performance Report is not the P&L report;
+  use Plot1 and the Print log for virtual spread results.
+
+  Long spread  = buy Data1 / sell Data2.
+  Short spread = sell Data1 / buy Data2.
+  Spread       = Close of Data1 - Close of Data2.
+}
+
+[IntrabarOrderGeneration = false]
+
+Inputs:
+    LookbackBars(1),
+    MinLeaderMove(1.0),
+    MinSpreadMove(0.0),
+    ProfitTarget(1.0),
+    StopLoss(1.0),
+    MaxHoldBars(5),
+    ContractSize(1.0),
+    CostPerLeg(0.0),
+    StartTime(0),
+    EndTime(2359),
+    ExcludeOpenMinute(True);
+
+Vars:
+    SpreadNow(0), SpreadPast(0), EntrySpread(0), ExitSpread(0),
+    LeaderMove(0), SpreadMove(0), OpenPoints(0),
+    TradePnL(0), CumPnL(0), HoldBars(0),
+    State(0), Direction(0), LastDate(0), LastTime(0),
+    TradeTimeOK(False), ExitedBar(False),
+    EntryPending(False), ExitPending(False);
+
+if GetAppInfo(aiStrategyAuto) = 1 then
+    RaiseRuntimeError("%SC-CS-V202 is virtual research only; auto trading is disabled.");
+if GetAppInfo(aiRealTimeCalc) = 1 then
+    RaiseRuntimeError("Use completed historical paired bars, not real-time calculation.");
+
+if LookbackBars < 1 or LookbackBars <> IntPortion(LookbackBars)
+    or MinLeaderMove < 0 or MinSpreadMove < 0
+    or ProfitTarget <= 0 or StopLoss <= 0
+    or MaxHoldBars < 1 or MaxHoldBars <> IntPortion(MaxHoldBars)
+    or ContractSize <= 0 or CostPerLeg < 0
+    or StartTime < 0 or StartTime > 2359
+    or EndTime < 0 or EndTime > 2359 then
+    RaiseRuntimeError("Invalid %SC-CS-V202 inputs.");
+
+if BarStatus(1) = 2 and BarStatus(2) = 2
+    and Date of Data1 = Date of Data2
+    and Time of Data1 = Time of Data2
+    and (Date of Data1 <> LastDate or Time of Data1 <> LastTime) then
+begin
+    if CurrentBar > LookbackBars
+       and Close of Data1 > 0 and Close of Data2 > 0
+       and Open of Data1 > 0 and Open of Data2 > 0 then
+    begin
+        SpreadNow = Close of Data1 - Close of Data2;
+        SpreadPast = Close[LookbackBars] of Data1
+                    - Close[LookbackBars] of Data2;
+        LeaderMove = Close of Data1 - Close[LookbackBars] of Data1;
+        SpreadMove = SpreadNow - SpreadPast;
+        TradeTimeOK = Time of Data1 >= StartTime
+                    and Time of Data1 <= EndTime;
+        if ExcludeOpenMinute and (Time of Data1 = 901 or Time of Data1 = 2101) then
+            TradeTimeOK = False;
+
+        ExitedBar = False;
+
+        { Fill a previously queued virtual entry at this paired bar open. }
+        if EntryPending then
+        begin
+            EntrySpread = Open of Data1 - Open of Data2;
+            EntryPending = False;
+            State = 2;
+            HoldBars = 0;
+            Print("%SC-CS-V202 ENTRY ", Date:7:0, " ", Time:4:0,
+                  " dir=", Direction:1:0,
+                  " spread=", EntrySpread:0:2);
+        end;
+
+        { Fill a previously queued virtual exit and book both legs together. }
+        if ExitPending then
+        begin
+            ExitSpread = Open of Data1 - Open of Data2;
+            if Direction = 1 then
+                TradePnL = (ExitSpread - EntrySpread) * ContractSize
+                         - 2 * CostPerLeg
+            else
+                TradePnL = (EntrySpread - ExitSpread) * ContractSize
+                         - 2 * CostPerLeg;
+            CumPnL = CumPnL + TradePnL;
+            Print("%SC-CS-V202 EXIT ", Date:7:0, " ", Time:4:0,
+                  " dir=", Direction:1:0,
+                  " exitSpread=", ExitSpread:0:2,
+                  " tradePnL=", TradePnL:0:2,
+                  " cumPnL=", CumPnL:0:2);
+            ExitPending = False;
+            State = 0;
+            Direction = 0;
+            HoldBars = 0;
+            ExitedBar = True;
+        end;
+
+        { Manage an already filled virtual paired position. }
+        if State = 2 and EntryPending = False and ExitPending = False then
+        begin
+            HoldBars = HoldBars + 1;
+            if Direction = 1 then
+                OpenPoints = SpreadNow - EntrySpread
+            else
+                OpenPoints = EntrySpread - SpreadNow;
+
+            if OpenPoints >= ProfitTarget - 0.0000001
+                or OpenPoints <= -StopLoss + 0.0000001
+                or HoldBars >= MaxHoldBars then
+            begin
+                ExitPending = True;
+                Print("%SC-CS-V202 EXIT SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " openPoints=", OpenPoints:0:2,
+                      " holdBars=", HoldBars:1:0);
+            end;
+        end else if State = 0 and EntryPending = False
+                and ExitPending = False and ExitedBar = False
+                and TradeTimeOK then
+        begin
+            { Leader up + spread up: queue long spread. }
+            if LeaderMove >= MinLeaderMove
+                and SpreadMove > MinSpreadMove then
+            begin
+                Direction = 1;
+                EntryPending = True;
+                Print("%SC-CS-V202 LONG SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " leader=", LeaderMove:0:2,
+                      " spreadMove=", SpreadMove:0:2);
+            end else if LeaderMove <= -MinLeaderMove
+                and SpreadMove < -MinSpreadMove then
+            begin
+                Direction = -1;
+                EntryPending = True;
+                Print("%SC-CS-V202 SHORT SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " leader=", LeaderMove:0:2,
+                      " spreadMove=", SpreadMove:0:2);
+            end;
+        end;
+    end;
+
+    Plot1(CumPnL, "CumPnL");
+    Plot2(SpreadNow, "Spread");
+    LastDate = Date of Data1;
+    LastTime = Time of Data1;
+end;

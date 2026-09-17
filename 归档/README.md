@@ -3,7 +3,7 @@
 这里保存不属于具体策略版本、但仍有参考价值的资料。当前有效策略代码统一从根目录的 `tasks/` 进入。
 
 - [学习资料](学习资料/README.md)：书籍封面、MC 视频课程范围、补充单元和职业方向讨论。
-- `平台知识/`：iQuant 与 MultiCharts 的跨任务平台笔记。
+- `平台知识/`：跨任务的软件笔记，包括 [iQuant](平台知识/iQuant/README.md)、[MultiCharts](平台知识/MultiCharts/README.md) 和 [PythonGo](平台知识/PythonGo/README.md)。
 - `规范/`：历史代码与文件组织要求。
 - `jd2609收盘价策略回测说明.pdf`、`QMT面板驱动型阳线买入策略回测说明.docx`：策略原始参考资料。
 - `第一根k线.docx`：K 线相关参考资料。

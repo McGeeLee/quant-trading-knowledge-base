@@ -1,0 +1,180 @@
+{ %SC-CS-V201
+  Intraday calendar-spread one-tick probe.
+
+  Data1/Data2 must be the two SC contracts with identical bar settings.
+  NearIsData1=True  : Data1 is the near/leader leg; long spread = buy Data1.
+  NearIsData1=False : Data2 is the near/leader leg; long spread = sell Data1.
+
+  Signal hypothesis:
+    the leader contract moves first; if the leader move and the defined
+    near-minus-far spread move have the same sign, trade the spread for a
+    short continuation. This is a research signal, not risk-free arbitrage.
+    Orders are generated only from completed paired bars and filled next bar.
+
+  Apply the same Signal to two reversed charts to route both legs:
+    Chart A: Data1=SC2610, Data2=SC2611, NearIsData1=True.
+    Chart B: Data1=SC2611, Data2=SC2610, NearIsData1=False.
+}
+
+[IntrabarOrderGeneration = false]
+
+Inputs:
+    NearIsData1(True),
+    LookbackBars(1),
+    MinLeaderMove(1.0),
+    MinSpreadMove(0.0),
+    Lots(1),
+    ProfitTarget(1.0),
+    StopLoss(1.0),
+    MaxHoldBars(5),
+    StartTime(0),
+    EndTime(2359),
+    ExcludeOpenMinute(True);
+
+Vars:
+    NearClose(0), FarClose(0), NearPast(0), FarPast(0),
+    SpreadNow(0), SpreadPast(0), LeaderMove(0), SpreadMove(0),
+    EntrySpread(0), OpenPoints(0), HoldBars(0),
+    State(0), LastDate(0), LastTime(0), ExitedBar(False),
+    TradeTimeOK(False);
+
+if GetAppInfo(aiStrategyAuto) = 1 then
+    RaiseRuntimeError("%SC-CS-V201 is historical research only.");
+if GetAppInfo(aiRealTimeCalc) = 1 then
+    RaiseRuntimeError("Use completed historical bars, not real-time calculation.");
+
+if LookbackBars < 1 or LookbackBars <> IntPortion(LookbackBars)
+    or Lots < 1 or Lots <> IntPortion(Lots)
+    or MinLeaderMove < 0 or MinSpreadMove < 0
+    or ProfitTarget <= 0 or StopLoss <= 0
+    or MaxHoldBars < 1 or MaxHoldBars <> IntPortion(MaxHoldBars)
+    or StartTime < 0 or StartTime > 2359
+    or EndTime < 0 or EndTime > 2359 then
+    RaiseRuntimeError("Invalid %SC-CS-V201 inputs.");
+
+if BarStatus(1) = 2 and BarStatus(2) = 2
+    and Date of Data1 = Date of Data2
+    and Time of Data1 = Time of Data2
+    and (Date of Data1 <> LastDate or Time of Data1 <> LastTime) then
+begin
+    if CurrentBar > LookbackBars then
+    begin
+        if NearIsData1 then
+        begin
+            NearClose = Close of Data1;
+            FarClose = Close of Data2;
+            NearPast = Close[LookbackBars] of Data1;
+            FarPast = Close[LookbackBars] of Data2;
+        end
+        else
+        begin
+            NearClose = Close of Data2;
+            FarClose = Close of Data1;
+            NearPast = Close[LookbackBars] of Data2;
+            FarPast = Close[LookbackBars] of Data1;
+        end;
+
+        SpreadNow = NearClose - FarClose;
+        SpreadPast = NearPast - FarPast;
+        LeaderMove = NearClose - NearPast;
+        SpreadMove = SpreadNow - SpreadPast;
+        TradeTimeOK = Time of Data1 >= StartTime
+                      and Time of Data1 <= EndTime;
+        if ExcludeOpenMinute and (Time of Data1 = 901 or Time of Data1 = 2101) then
+            TradeTimeOK = False;
+        ExitedBar = False;
+
+        { Previous bar submitted an exit; this bar is its simulated fill. }
+        if State = 3 then
+        begin
+            if MarketPosition <> 0 then
+                RaiseRuntimeError("Local leg did not exit. Inspect both charts.");
+            State = 0;
+            HoldBars = 0;
+            ExitedBar = True;
+        end;
+
+        { Previous bar submitted an entry; this bar is its simulated fill.
+          Do not abort the whole calculation when a leg is not confirmed.
+          In the two-chart research setup, the companion chart can be one
+          bar out of sync or the order can be rejected independently. }
+        if State = 1 then
+        begin
+            if Open of Data1 <= 0 or Open of Data2 <= 0 then
+            begin
+                Print("%SC-CS-V201 CANCEL: invalid paired opening price.");
+                State = 0;
+            end
+            else if (NearIsData1 and MarketPosition <> 1)
+                or (NearIsData1 = False and MarketPosition <> -1) then
+            begin
+                { The order did not become a local position. Do not start
+                  profit/stop/timeout management on a nonexistent leg. }
+                Print("%SC-CS-V201 CANCEL: local leg entry not confirmed.");
+                State = 0;
+            end
+            else
+            begin
+                EntrySpread = (Open of Data1 - Open of Data2);
+                if NearIsData1 = False then
+                    EntrySpread = (Open of Data2 - Open of Data1);
+                HoldBars = 0;
+                State = 2;
+                Print("%SC-CS-V201 ENTRY ", Date:7:0, " ", Time:4:0,
+                      " spread=", EntrySpread:0:2);
+            end;
+        end;
+
+        if State = 2 then
+        begin
+            HoldBars = HoldBars + 1;
+            OpenPoints = SpreadNow - EntrySpread;
+            if NearIsData1 = False then
+                OpenPoints = -OpenPoints;
+
+            if OpenPoints >= ProfitTarget - 0.0000001 then
+            begin
+                if NearIsData1 then Sell ("CS201TP") next bar at market
+                else BuyToCover ("CS201TP") next bar at market;
+                State = 3;
+            end
+            else if OpenPoints <= -StopLoss + 0.0000001 then
+            begin
+                if NearIsData1 then Sell ("CS201SL") next bar at market
+                else BuyToCover ("CS201SL") next bar at market;
+                State = 3;
+            end
+            else if HoldBars >= MaxHoldBars then
+            begin
+                if NearIsData1 then Sell ("CS201TIME") next bar at market
+                else BuyToCover ("CS201TIME") next bar at market;
+                State = 3;
+            end;
+        end
+        else if State = 0 and ExitedBar = False and TradeTimeOK then
+        begin
+            { Leader up + spread up: long spread. }
+            if LeaderMove >= MinLeaderMove
+                and SpreadMove > MinSpreadMove then
+            begin
+                if NearIsData1 then Buy ("CS201LE") Lots contracts next bar at market
+                else SellShort ("CS201SE") Lots contracts next bar at market;
+                State = 1;
+                Print("%SC-CS-V201 LONG SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " leader=", LeaderMove:0:2, " spread=", SpreadMove:0:2);
+            end
+            { Leader down + spread down: short spread. }
+            else if LeaderMove <= -MinLeaderMove
+                and SpreadMove < -MinSpreadMove then
+            begin
+                if NearIsData1 then SellShort ("CS201SE") Lots contracts next bar at market
+                else Buy ("CS201LE") Lots contracts next bar at market;
+                State = 1;
+                Print("%SC-CS-V201 SHORT SIGNAL ", Date:7:0, " ", Time:4:0,
+                      " leader=", LeaderMove:0:2, " spread=", SpreadMove:0:2);
+            end;
+        end;
+    end;
+    LastDate = Date of Data1;
+    LastTime = Time of Data1;
+end;
