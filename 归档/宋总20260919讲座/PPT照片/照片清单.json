@@ -1,0 +1,142 @@
+[
+  {
+    "file": "01_目录.jpg",
+    "original_filename": "codex-clipboard-8323e4ec-220f-42c6-8424-cad752bb8f7e.jpg",
+    "bytes": 75963,
+    "sha256": "4669ea4f1f41e33ac8b3c9e8375cb6888727deb110589f939a665f6fec67de54",
+    "same_bytes_as": null
+  },
+  {
+    "file": "02_期权定义与生活案例.jpg",
+    "original_filename": "codex-clipboard-2edbe341-50e3-417d-8120-96d2e31699cf.jpg",
+    "bytes": 107729,
+    "sha256": "b8819dcc9e679db6947f94e10c2b6c57545b783d2b720378adb02545f4f29d7b",
+    "same_bytes_as": null
+  },
+  {
+    "file": "03_期权股票期货对比.jpg",
+    "original_filename": "codex-clipboard-66b5dfb1-74f5-4313-a6ee-89b462c78812.jpg",
+    "bytes": 84197,
+    "sha256": "0aa046fefdf870f8917fb2cd3cb26b1091f5fc02ec7304fd89038ad6a6388191",
+    "same_bytes_as": null
+  },
+  {
+    "file": "04_股指期权交易机制.jpg",
+    "original_filename": "codex-clipboard-4ba27ae3-383b-4027-9b86-de7b8ac1b5f0.jpg",
+    "bytes": 86153,
+    "sha256": "963736b7351df1ba1ff4691d054fe1a9c23a5f6474af4358757c4a0dfcfb2588",
+    "same_bytes_as": null
+  },
+  {
+    "file": "05_买卖双方风险收益.jpg",
+    "original_filename": "codex-clipboard-af8116c5-1752-411a-852f-61e76558d50f.jpg",
+    "bytes": 106150,
+    "sha256": "174b069d88756d44ba7b2ac8f75bf8d5c8d16dd57ce50d59c2bdd1303b08f89b",
+    "same_bytes_as": null
+  },
+  {
+    "file": "06_主要品种与合约.jpg",
+    "original_filename": "codex-clipboard-d4413111-8c89-4d09-a8b6-be70751eb3b3.jpg",
+    "bytes": 102396,
+    "sha256": "3f10c1a5bd8ea0dcf776610a74a4d172dab638883539634728fb2c41e91aae15",
+    "same_bytes_as": null
+  },
+  {
+    "file": "07_成交量与活跃度.jpg",
+    "original_filename": "codex-clipboard-c55c23ad-ee81-4cc5-950b-b98146a9b7a7.jpg",
+    "bytes": 103383,
+    "sha256": "5477e8c5df2664c9bc56b2eae7e7c2c3cff72712e78d5b6190ef31bc2f5c1851",
+    "same_bytes_as": null
+  },
+  {
+    "file": "08_T型报价表.jpg",
+    "original_filename": "codex-clipboard-986bb158-e5d4-49bd-8e0e-9615cd7a409b.jpg",
+    "bytes": 2138043,
+    "sha256": "31c829d948b12152d8ff50d0418f7ce5a34b0b406babe6b556ab75b63c6c2474",
+    "same_bytes_as": null
+  },
+  {
+    "file": "09_希腊字母.jpg",
+    "original_filename": "codex-clipboard-99752a2c-3ee1-434b-b956-158a2cc65d52.jpg",
+    "bytes": 104514,
+    "sha256": "0a657cc3c82f7295d6c61b437d911867e3e72ce218cb1a4dc7cc82d97c670857",
+    "same_bytes_as": null
+  },
+  {
+    "file": "10_买入看涨.jpg",
+    "original_filename": "codex-clipboard-c293ef1a-6555-4e14-ae0a-886845611866.jpg",
+    "bytes": 1651269,
+    "sha256": "67dcafe6e0c39304ef08896279fe5380f09267923caef61f4e4f78ac3b877bde",
+    "same_bytes_as": null
+  },
+  {
+    "file": "11_买入看跌.jpg",
+    "original_filename": "codex-clipboard-0c401094-58c9-4ff1-8ce6-4c10d8382d7b.jpg",
+    "bytes": 117657,
+    "sha256": "1fac991f97f7512e729f9c8163cca64751b6ed4737eb2dcd89ba67a2acc3b7c6",
+    "same_bytes_as": null
+  },
+  {
+    "file": "12_卖出看涨.jpg",
+    "original_filename": "codex-clipboard-0739a6e7-196f-4915-9e65-805e149b96a6.jpg",
+    "bytes": 110677,
+    "sha256": "3bea2ea6ebd6e351a0101ff4d1965c55770c6742ca9828233e8c5e5b303f3d1e",
+    "same_bytes_as": null
+  },
+  {
+    "file": "13_卖出看跌.jpg",
+    "original_filename": "codex-clipboard-6375b0ef-24cf-40ea-b02b-afd1e848d7b3.jpg",
+    "bytes": 112883,
+    "sha256": "e8b829b93a328412b2e86783d44a8591d49c5d0a77853e6279e29f12b6e48bc7",
+    "same_bytes_as": null
+  },
+  {
+    "file": "14_牛市看涨价差.jpg",
+    "original_filename": "codex-clipboard-fcad082a-b045-497d-b837-c52b73bf29a0.jpg",
+    "bytes": 101734,
+    "sha256": "909351f18dc22eb0e53e09952c58aa611570d903423c3b5d87b0e7f6d0437fa3",
+    "same_bytes_as": null
+  },
+  {
+    "file": "15_保护性看跌.jpg",
+    "original_filename": "codex-clipboard-16f82f4b-aca0-4fb9-9779-28a14010d1b8.jpg",
+    "bytes": 110958,
+    "sha256": "8489cd14103a79895b19ec59b8876429d5d16ee993be4162cca52cc15ab8d604",
+    "same_bytes_as": null
+  },
+  {
+    "file": "16_机构套期保值.jpg",
+    "original_filename": "codex-clipboard-c30c1d58-0173-4c0b-ad2c-3370f64eea54.jpg",
+    "bytes": 114473,
+    "sha256": "f7524e5c8f066833cc32e03d7ca902b75039916cbcdd1be9b7171e35420af6b6",
+    "same_bytes_as": null
+  },
+  {
+    "file": "17_风控纪律与误区.jpg",
+    "original_filename": "codex-clipboard-a2b88c4a-d3c2-42f5-86cc-7d54904fb58d.jpg",
+    "bytes": 109622,
+    "sha256": "eceaba0ad0dad901b42ad4517176026d63121d4ece125d442f379693c60e3fa8",
+    "same_bytes_as": null
+  },
+  {
+    "file": "18_备兑看涨.jpg",
+    "original_filename": "codex-clipboard-bf3dca3e-55e0-47c4-9162-39b380da0ae3.jpg",
+    "bytes": 96561,
+    "sha256": "21c98f27e4037312832c8f3330b7e000ab0b0ea0c8aab7938d90af094d25f753",
+    "same_bytes_as": null
+  },
+  {
+    "file": "19_备兑看涨_重复上传2.jpg",
+    "original_filename": "codex-clipboard-34d6e4ff-a115-4f1d-a1da-d575b7538da6.jpg",
+    "bytes": 96561,
+    "sha256": "21c98f27e4037312832c8f3330b7e000ab0b0ea0c8aab7938d90af094d25f753",
+    "same_bytes_as": "18_备兑看涨.jpg"
+  },
+  {
+    "file": "20_备兑看涨_重复上传3.jpg",
+    "original_filename": "codex-clipboard-8950b6a9-f0d3-4839-b426-0a1ea084f611.jpg",
+    "bytes": 96561,
+    "sha256": "21c98f27e4037312832c8f3330b7e000ab0b0ea0c8aab7938d90af094d25f753",
+    "same_bytes_as": "18_备兑看涨.jpg"
+  }
+]
